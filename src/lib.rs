@@ -8,7 +8,11 @@ use headers::authorization::{Authorization, Basic};
 use headers::{ContentType, HeaderMapExt};
 use hyper::client::connect::HttpConnector;
 use hyper::{Body, Method, StatusCode};
+#[cfg(feature = "rustls")]
+use hyper_rustls::HttpsConnector;
+#[cfg(not(feature = "rustls"))]
 use hyper_tls::HttpsConnector;
+
 pub use message::{Message, OutboundMessage};
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -72,11 +76,16 @@ pub trait FromMap {
 
 impl Client {
     pub fn new(account_id: &str, auth_token: &str) -> Client {
+        #[cfg(feature = "rustls")]
+        let https_connector = HttpsConnector::with_native_roots();
+        #[cfg(not(feature = "rustls"))]
+        let https_connector = HttpsConnector::new();
+
         Client {
             account_id: account_id.to_string(),
             auth_token: auth_token.to_string(),
             auth_header: Authorization::basic(account_id, auth_token),
-            http_client: hyper::Client::builder().build(HttpsConnector::new()),
+            http_client: hyper::Client::builder().build(https_connector),
         }
     }
 
